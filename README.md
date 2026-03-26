@@ -1,131 +1,139 @@
-# Data Science Assistant — Fine-tuned LLM
+# DataSci-Coder — Fine-Tuned LLM for Data Science Code Generation
 
-A domain-specific language model fine-tuned on curated data science content. Built end-to-end: data collection, cleaning, training, evaluation, and serving.
+A QLoRA fine-tuned [Qwen2.5-Coder-14B-Instruct](https://huggingface.co/Qwen/Qwen2.5-Coder-14B-Instruct) optimized for data science code generation. Outputs clean, runnable Python code with zero explanatory text.
 
-## What it does
+Model weights on HuggingFace: [jsmall12/DataSci-Coder-14B-LoRA](https://huggingface.co/jsmall12/DataSci-Coder-14B-LoRA)
 
-Fine-tunes **Qwen2.5-1.5B-Instruct** using QLoRA on ~1,500 curated examples from the "Daily Dose of Data Science" newsletter. The resulting model answers questions about ML, deep learning, LLMs, RAG, AI agents, MLOps, and more — with practical explanations and code.
+## Results
 
-## Architecture
+| Metric | Fine-tuned | Base Model | Delta |
+|--------|:---:|:---:|:---:|
+| Hard Eval (12 complex tasks) | 12/12 | 12/12 | Tie |
+| Constraint Compliance | 93.3% | 91.4% | **+1.9%** |
+| Code-Only Compliance | 10/10 | 6/10 | **+67%** |
+| Code Ratio | 100% | 87.9% | **+12.1%** |
 
-```
-Gmail API → fetch → clean → format → train (QLoRA) → eval → serve
-  (Mac)      (Mac)   (Mac)   (Mac)    (jarch GPU)   (jarch) (jarch)
-```
+The fine-tuned model's biggest win is instruction compliance: when told "respond with code only," the base model adds explanatory text 40% of the time. The fine-tuned model follows the instruction 100% of the time.
 
-| Component | Script | What it does |
-|-----------|--------|-------------|
-| Fetch | `fetch_emails.py` | Pull emails from Gmail, scrape linked articles, download images |
-| Clean | `clean_data.py` | Normalize text, detect sections/categories, filter noise |
-| Format | `format_training_data.py` | Generate Q&A pairs (7 strategies), quality filter, stratified split |
-| Train | `train.py` | QLoRA fine-tuning on GTX 1660 Ti (6GB VRAM) |
-| Eval | `eval.py` | Sanity checks, ROUGE-L, keyword recall, failure detection, base model comparison |
-| Serve | `inference.py` | Interactive CLI or FastAPI HTTP server |
-| Update | `update.py` | Daily cron pipeline: fetch new emails, retrain weekly |
-
-## Training details
+## Training Details
 
 | Parameter | Value |
 |-----------|-------|
-| Base model | `unsloth/Qwen2.5-1.5B-Instruct-bnb-4bit` |
-| Method | QLoRA (r=8, alpha=16, dropout=0.05) |
-| Target modules | All attention + MLP layers |
-| Training examples | ~1,500 (stratified 90/10 split) |
-| Effective batch size | 16 (batch=1, grad_accum=16) |
-| Learning rate | 2e-4 (cosine schedule, 5% warmup) |
-| Epochs | 2 |
-| Sequence length | 512 |
-| Hardware | GTX 1660 Ti (6GB VRAM), CUDA 12.1 |
-| Label masking | Loss on assistant tokens only |
+| Base Model | `unsloth/Qwen2.5-Coder-14B-Instruct-bnb-4bit` |
+| Method | QLoRA (4-bit quantization) |
+| LoRA Rank | 16 |
+| LoRA Alpha | 32 |
+| LoRA Targets | q/k/v/o_proj, gate/up/down_proj |
+| Trainable Parameters | 68.8M / 14.8B (0.46%) |
+| Training Examples | 10,795 |
+| Epochs | 1 |
+| Final Loss | 0.5933 |
+| Training Time | 1.9 hours on NVIDIA L40S |
+| Precision | bfloat16 |
+| Optimizer | Paged AdamW 8-bit |
+| Learning Rate | 3e-5 (cosine schedule) |
+| Effective Batch Size | 16 (1 x 16 grad accum) |
 
-## Training data
+## Training Data
 
-Sourced from 286 newsletter issues covering:
+10,795 curated data science instruction-response pairs from:
+- 6 public HuggingFace datasets (CodeAlpaca, Evol-Instruct, etc.)
+- University coursework (statistics, ML, deep learning)
+- Hand-curated examples
 
-| Category | Examples | Share |
-|----------|----------|-------|
-| Agents | 879 | 52% |
-| LLMs | 352 | 21% |
-| RAG | 139 | 8% |
-| Machine Learning | 101 | 6% |
-| MCP | 49 | 3% |
-| Deep Learning | 49 | 3% |
-| MLOps | 40 | 2% |
-| Statistics | 36 | 2% |
-| Prompt Engineering | 24 | 1% |
-| Graph ML | 16 | 1% |
-
-Seven generation strategies: subject overviews, section Q&A, code-focused pairs, how-to guides, comparisons, article summaries, and multi-turn conversations.
-
-Quality filters remove: short/empty responses, URL-heavy content, newsletter boilerplate (headers, sponsor blocks, promotional CTAs), duplicate examples.
+All examples filtered for Python code quality, data science relevance, and response length. Categories: machine learning, deep learning, statistics, data wrangling, visualization, NLP, time series, numerical computing.
 
 ## Evaluation
 
-```bash
-python eval.py                  # Full eval: sanity checks + validation sample
-python eval.py --quick          # Sanity checks only (~2 min)
-python eval.py --compare-base   # Compare fine-tuned vs base model
-python eval.py --val-samples 50 # Evaluate more validation examples
+### Hard Eval — 12 Complex Tasks
+
+All 12 tasks produced correct, complete, runnable implementations:
+
+| Category | Tasks | Score |
+|----------|-------|:---:|
+| Statistics | Bayesian A/B testing, Kaplan-Meier survival analysis, time series CV + ARIMA, VIF + Ridge/Lasso/ElasticNet | 4/4 |
+| Machine Learning | Stacking ensemble, SHAP importance, Isolation Forest, TF-IDF + SVM pipeline | 4/4 |
+| Deep Learning | LR scheduler (warmup + cosine), BiLSTM + attention, VAE, GAN | 4/4 |
+
+### Constraint Eval — 10 Multi-Constraint Tests
+
+| Test | FT | Base | Delta |
+|------|:---:|:---:|:---:|
+| C01 Multi-step data cleaning | 8/8 | 8/8 | 0 |
+| C02 Complete ML pipeline | 12/12 | 12/12 | 0 |
+| C03 Statistical hypothesis test | 9/9 | 7/9 | **+2** |
+| C04 PyTorch architecture | 9/9 | 7/9 | **+2** |
+| C05 EDA visualizations | 11/12 | 10/12 | **+1** |
+| C06 Cross-validated pipeline | 12/12 | 12/12 | 0 |
+| C07 Time series ARIMA | 9/10 | 10/10 | -1 |
+| C08 DL training function | 8/10 | 8/10 | 0 |
+| C09 Pandas method chain | 10/10 | 10/10 | 0 |
+| C10 Model evaluation | 10/13 | 12/13 | -2 |
+| **Total** | **98/105** | **96/105** | **+2** |
+
+## Usage
+
+```python
+from unsloth import FastLanguageModel
+import torch
+
+model, tokenizer = FastLanguageModel.from_pretrained(
+    model_name="jsmall12/DataSci-Coder-14B-LoRA",
+    max_seq_length=2048,
+    load_in_4bit=True,
+    dtype=None,
+)
+FastLanguageModel.for_inference(model)
+
+messages = [
+    {"role": "system", "content": "You are an expert data science coding assistant. Respond ONLY with clean, runnable Python code. Use inline comments for explanation. No text outside code blocks."},
+    {"role": "user", "content": "Write a function to train a logistic regression model with sklearn and print the classification report."},
+]
+
+text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+inputs = tokenizer(text, return_tensors="pt").to("cuda")
+
+with torch.no_grad():
+    output = model.generate(
+        **inputs,
+        max_new_tokens=1024,
+        temperature=0.1,
+        do_sample=True,
+        top_p=0.9,
+        repetition_penalty=1.15,
+        use_cache=False,
+    )
+
+response = tokenizer.decode(output[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
+print(response)
 ```
 
-Metrics:
-- **ROUGE-L** — lexical overlap with reference answers
-- **Keyword recall** — key terms from reference present in output
-- **Failure detection** — empty responses, repetition, prompt echo, off-topic
-- **Sanity checks** — 10 hand-crafted prompts across explain/code/compare/how-to types
-
-## Quick start
-
-```bash
-# On jarch (GPU server)
-pip install -r requirements-jarch.txt
-
-# Train
-python train.py                     # ~6.5h on 1660 Ti
-python train.py --test              # Quick test with 10 examples
-
-# Evaluate
-python eval.py --quick              # Sanity checks
-python eval.py --compare-base       # Full eval with base model comparison
-
-# Serve
-python inference.py --mode cli      # Interactive CLI
-python inference.py --mode server   # FastAPI on port 8000
-```
-
-```bash
-# From Mac (access server)
-ssh -L 8000:localhost:8000 jarch    # Tunnel for API access
-curl -X POST localhost:8000/generate \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "Explain how RAG works"}'
-```
-
-## Project structure
+## Project Structure
 
 ```
-├── fetch_emails.py             # Step 0: Gmail data collection
-├── clean_data.py               # Step 1: Text cleaning & structuring
-├── format_training_data.py     # Step 2: Training pair generation
-├── train.py                    # Step 3: QLoRA fine-tuning
-├── eval.py                     # Step 3.5: Model evaluation
-├── inference.py                # Step 4: CLI + API serving
-├── update.py                   # Step 5: Daily pipeline orchestrator
-├── requirements.txt            # Mac dependencies
-├── requirements-jarch.txt      # jarch (GPU server) dependencies
-├── data/
-│   ├── emails/                 # Raw email JSONs
-│   ├── clean_emails/           # Cleaned & structured emails
-│   ├── training/               # Generated training data (JSONL)
-│   └── images/                 # Downloaded article images
-└── outputs/
-    ├── lora_adapter/           # Trained LoRA weights
-    └── eval_results.json       # Evaluation results
+├── format_training_data.py     # Build training JSONL from multiple sources
+├── download_public_data.py     # Download & filter public HuggingFace datasets
+├── format_class_data.py        # Format university coursework examples
+├── clean_data.py               # Text cleaning & structuring
+├── kaggle_notebook_v3.py       # Full Kaggle training + eval notebook (T4 x2)
+├── train_lightning.ipynb        # Lightning AI training + eval notebook (L40S)
+├── train_lightning.py           # Standalone training script
+├── train.py                     # Local training script
+├── eval.py                      # Evaluation framework
+├── inference.py                 # Interactive CLI inference
+├── kaggle_eval.py               # Kaggle hard eval
+├── kaggle_constraint_eval.py    # Kaggle constraint eval
+├── kaggle_eval_full.py          # Combined Kaggle eval
+├── requirements.txt             # Python dependencies
+└── requirements-jarch.txt       # GPU server dependencies
 ```
 
-## Known limitations
+## Hardware Requirements
 
-- **Category imbalance**: Agents (52%) and LLMs (21%) dominate training data. Model will be weaker on underrepresented categories (NLP, Graph ML, Statistics).
-- **Sequence length 512**: Responses are capped at training sequence length. Complex topics may get truncated.
-- **Single GPU**: Training on 6GB VRAM constrains model size and batch size.
-- **Newsletter source**: Training data reflects one newsletter's style, coverage, and potential biases.
+- **Minimum:** ~10GB VRAM (4-bit quantized)
+- **Recommended:** 24GB+ VRAM (L4, A100, etc.)
+- Tested on: NVIDIA L40S (44GB), NVIDIA T4 x2 (15GB each)
+
+## License
+
+Apache 2.0
