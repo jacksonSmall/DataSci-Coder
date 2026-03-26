@@ -111,21 +111,13 @@ print(response)
 ## Project Structure
 
 ```
+├── train_lightning.ipynb        # Training + eval notebook (Lightning AI, L40S)
 ├── format_training_data.py     # Build training JSONL from multiple sources
 ├── download_public_data.py     # Download & filter public HuggingFace datasets
 ├── format_class_data.py        # Format university coursework examples
 ├── clean_data.py               # Text cleaning & structuring
-├── kaggle_notebook_v3.py       # Full Kaggle training + eval notebook (T4 x2)
-├── train_lightning.ipynb        # Lightning AI training + eval notebook (L40S)
-├── train_lightning.py           # Standalone training script
-├── train.py                     # Local training script
-├── eval.py                      # Evaluation framework
 ├── inference.py                 # Interactive CLI inference
-├── kaggle_eval.py               # Kaggle hard eval
-├── kaggle_constraint_eval.py    # Kaggle constraint eval
-├── kaggle_eval_full.py          # Combined Kaggle eval
-├── requirements.txt             # Python dependencies
-└── requirements-jarch.txt       # GPU server dependencies
+└── requirements.txt             # Python dependencies
 ```
 
 ## Hardware Requirements

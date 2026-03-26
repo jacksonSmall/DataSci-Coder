@@ -1,9 +1,0 @@
-unsloth[colab-new]
-peft
-bitsandbytes
-trl
-accelerate
-datasets
-fastapi
-uvicorn
-rouge-score
