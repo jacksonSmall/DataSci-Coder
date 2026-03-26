@@ -2,7 +2,9 @@
 
 A QLoRA fine-tuned [Qwen2.5-Coder-14B-Instruct](https://huggingface.co/Qwen/Qwen2.5-Coder-14B-Instruct) optimized for data science code generation. Outputs clean, runnable Python code with zero explanatory text.
 
-Model weights on HuggingFace: [jsmall12/DataSci-Coder-14B-LoRA](https://huggingface.co/jsmall12/DataSci-Coder-14B-LoRA)
+[![Model on HuggingFace](https://img.shields.io/badge/HuggingFace-Model-yellow)](https://huggingface.co/jsmall12/DataSci-Coder-14B-LoRA)
+
+Model weights: [jsmall12/DataSci-Coder-14B-LoRA](https://huggingface.co/jsmall12/DataSci-Coder-14B-LoRA)
 
 ## Results
 
