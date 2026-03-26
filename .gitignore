@@ -1,0 +1,30 @@
+# Secrets
+credentials.json
+token.json
+
+# Data (too large for git)
+data/
+data/images/
+data/emails/
+data/clean_emails/
+
+# Model outputs
+outputs/
+*.safetensors
+*.bin
+*.gguf
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Claude
+.claude/

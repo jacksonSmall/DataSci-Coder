@@ -1,0 +1,9 @@
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+beautifulsoup4
+requests
+lxml
+ftfy
+datasets
+scikit-learn
